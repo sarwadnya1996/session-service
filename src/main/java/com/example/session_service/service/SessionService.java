@@ -7,11 +7,16 @@ import com.example.session_service.dto.TokenSet;
 import com.example.session_service.model.User;
 import com.example.session_service.repository.UserRepository;
 import lombok.AllArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -55,6 +60,7 @@ public class SessionService {
                 .build();
     }
 
+    @SneakyThrows
     private String getToken(AuthRequest request) {
         String sessionId = UUID.randomUUID().toString();
         long issuesAt = System.currentTimeMillis();
@@ -65,6 +71,17 @@ public class SessionService {
                 .expireAt(String.valueOf((issuesAt + (15 * 60 * 1000)))).build();
 
         String payload = new ObjectMapper().writeValueAsString(detail);
-        return Base64.getEncoder().encodeToString(payload.getBytes(StandardCharsets.UTF_8));
+
+        KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+        keyGen.init(256);
+        byte[] iv =new byte[16];
+        SecretKey key= keyGen.generateKey();
+
+        IvParameterSpec parameterSpec = new IvParameterSpec(iv);
+
+        Cipher cipher=Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.ENCRYPT_MODE,key,parameterSpec);
+        byte[] encrypted = cipher.doFinal(payload.getBytes());
+        return Base64.getEncoder().encodeToString(encrypted);
     }
 }
