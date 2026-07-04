@@ -24,18 +24,20 @@ public class SessionService {
 
     public AuthResponse createToken(AuthRequest request) {
         log.info("validating user");
-/*
+
 
         Optional<User> optionalUser = repository.findUserByUserName(request.getUserName());
 
         if (optionalUser.isEmpty()) {
             log.info("User does not exist");
+            throw new RuntimeException("User does not exist");
         }
         User user = optionalUser.get();
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             log.info("Invalid credentials");
+            throw new RuntimeException("Invalid credentials");
         }
-*/
+
 
         String token = getToken(request);
 
