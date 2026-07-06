@@ -6,26 +6,33 @@ import com.example.session_service.dto.TokenDetail;
 import com.example.session_service.dto.TokenSet;
 import com.example.session_service.model.User;
 import com.example.session_service.repository.UserRepository;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
 import javax.crypto.Cipher;
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
-import java.nio.charset.StandardCharsets;
+import javax.crypto.spec.SecretKeySpec;
 import java.util.*;
 
 @Slf4j
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class SessionService {
     private final UserRepository repository;
     private final PasswordEncoder passwordEncoder;
+
+    @Value("${aes.secret.key}")
+    private String secretKey;
+
+    @Value("${aes.secret.iv}")
+    private String secretIv;
+
+    private final static String ALGORITHM = "AES/CBC/PKCS5Padding";
 
     public AuthResponse createToken(AuthRequest request) {
         log.info("validating user");
@@ -72,15 +79,13 @@ public class SessionService {
 
         String payload = new ObjectMapper().writeValueAsString(detail);
 
-        KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-        keyGen.init(256);
-        byte[] iv =new byte[16];
-        SecretKey key= keyGen.generateKey();
 
-        IvParameterSpec parameterSpec = new IvParameterSpec(iv);
+        SecretKeySpec secretKeySpec = new SecretKeySpec(HexFormat.of().parseHex(secretKey), "AES");
 
-        Cipher cipher=Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.ENCRYPT_MODE,key,parameterSpec);
+        IvParameterSpec parameterSpec = new IvParameterSpec(HexFormat.of().parseHex(secretIv));
+
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, parameterSpec);
         byte[] encrypted = cipher.doFinal(payload.getBytes());
         return Base64.getEncoder().encodeToString(encrypted);
     }
