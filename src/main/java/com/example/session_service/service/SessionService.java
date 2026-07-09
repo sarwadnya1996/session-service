@@ -45,6 +45,9 @@ public class SessionService {
             throw new RuntimeException("User does not exist");
         }
         User user = optionalUser.get();
+        if(!user.getIsActive()){
+            throw new RuntimeException("User is inactive");
+        }
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             log.info("Invalid credentials");
             throw new RuntimeException("Invalid credentials");
