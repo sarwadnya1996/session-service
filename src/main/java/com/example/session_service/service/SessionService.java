@@ -6,36 +6,53 @@ import com.example.session_service.dto.TokenDetail;
 import com.example.session_service.dto.TokenSet;
 import com.example.session_service.model.User;
 import com.example.session_service.repository.UserRepository;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
-import java.nio.charset.StandardCharsets;
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import java.util.*;
 
 @Slf4j
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class SessionService {
     private final UserRepository repository;
     private final PasswordEncoder passwordEncoder;
 
+    @Value("${aes.secret.key}")
+    private String secretKey;
+
+    @Value("${aes.secret.iv}")
+    private String secretIv;
+
+    private final static String ALGORITHM = "AES/CBC/PKCS5Padding";
+
     public AuthResponse createToken(AuthRequest request) {
         log.info("validating user");
-/*
+
 
         Optional<User> optionalUser = repository.findUserByUserName(request.getUserName());
 
         if (optionalUser.isEmpty()) {
             log.info("User does not exist");
+            throw new RuntimeException("User does not exist");
         }
         User user = optionalUser.get();
+        if(!user.getIsActive()){
+            throw new RuntimeException("User is inactive");
+        }
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             log.info("Invalid credentials");
+            throw new RuntimeException("Invalid credentials");
         }
-*/
+
 
         String token = getToken(request);
 
@@ -53,6 +70,7 @@ public class SessionService {
                 .build();
     }
 
+    @SneakyThrows
     private String getToken(AuthRequest request) {
         String sessionId = UUID.randomUUID().toString();
         long issuesAt = System.currentTimeMillis();
@@ -63,6 +81,15 @@ public class SessionService {
                 .expireAt(String.valueOf((issuesAt + (15 * 60 * 1000)))).build();
 
         String payload = new ObjectMapper().writeValueAsString(detail);
-        return Base64.getEncoder().encodeToString(payload.getBytes(StandardCharsets.UTF_8));
+
+
+        SecretKeySpec secretKeySpec = new SecretKeySpec(HexFormat.of().parseHex(secretKey), "AES");
+
+        IvParameterSpec parameterSpec = new IvParameterSpec(HexFormat.of().parseHex(secretIv));
+
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, parameterSpec);
+        byte[] encrypted = cipher.doFinal(payload.getBytes());
+        return Base64.getEncoder().encodeToString(encrypted);
     }
 }

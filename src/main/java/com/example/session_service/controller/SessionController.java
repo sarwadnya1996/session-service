@@ -9,14 +9,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@Controller
+@RestController
 @AllArgsConstructor
 @Slf4j
+@RequestMapping("/api/session")
 public class SessionController {
     private final SessionService sessionService;
 
-    @PostMapping("/createToken")
+    @PostMapping("/createSession")
     public ResponseEntity<AuthResponse> createToken(@ModelAttribute AuthRequest request){
         log.info("creating token for user {}",request.getUserName());
         return ResponseEntity.ok(sessionService.createToken(request));

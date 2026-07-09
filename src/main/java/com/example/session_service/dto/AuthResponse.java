@@ -1,8 +1,12 @@
 package com.example.session_service.dto;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.Set;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
